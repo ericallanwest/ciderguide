@@ -1,5 +1,9 @@
 # Maps and Visualizations
+
+## ArcGIS Online
 - [World Cider Map](https://arcg.is/8vnbm1)
+
+## Tableau
 - [Worldwide Cider Competitions](https://public.tableau.com/views/CiderCompetitionsDraft20240926/MedalistsMap)
 - [GLINTCAP Commercial Medalists](https://public.tableau.com/views/GLINTCAPCommercialMedalists2005-2024/MedalistsMap)
 - [Cidercraft Awards](https://public.tableau.com/views/CidercraftAwards/MedalistsMap)
