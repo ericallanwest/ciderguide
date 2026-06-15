@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Cider Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      background: #111;
+    }
+
+    /* ── Header ── */
+    #header {
+      background: #1c1c1e;
+      padding: 0 16px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+      border-bottom: 1px solid #2a2a2c;
+    }
+
+    #header h1 {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    #header h1 em {
+      color: #e17b2c;
+      font-style: normal;
+    }
+
+    #stats {
+      flex: 1;
+      font-size: 12px;
+      color: #888;
+    }
+
+    #stats strong { color: #bbb; }
+
+    #attr {
+      font-size: 11px;
+      color: #555;
+      white-space: nowrap;
+    }
+
+    #attr a { color: #777; text-decoration: none; }
+    #attr a:hover { color: #aaa; }
+
+    /* ── Map ── */
+    #map { flex: 1; }
+
+    /* ── Legend / Filter panel ── */
+    #legend {
+      position: absolute;
+      bottom: 30px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 10px;
+      padding: 11px 13px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+      z-index: 1000;
+      min-width: 185px;
+      backdrop-filter: blur(4px);
+    }
+
+    #legend-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 7px;
+    }
+
+    #legend-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: #666;
+    }
+
+    .legend-ctrl-group { display: flex; gap: 6px; }
+
+    .legend-ctrl {
+      font-size: 11px;
+      color: #aaa;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      text-decoration: underline;
+      font-family: inherit;
+    }
+
+    .legend-ctrl:hover { color: #444; }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s;
+    }
+
+    .legend-row:hover { background: #f4f4f4; }
+
+    .legend-row.off { opacity: 0.38; }
+
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 1.5px rgba(0,0,0,0.12);
+    }
+
+    .legend-label {
+      font-size: 13px;
+      color: #222;
+      flex: 1;
+    }
+
+    .legend-count {
+      font-size: 11px;
+      color: #bbb;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Popups ── */
+    .cg-popup .leaflet-popup-content-wrapper {
+      border-radius: 10px;
+      padding: 0;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.14);
+    }
+
+    .cg-popup .leaflet-popup-content {
+      margin: 0;
+      width: 260px !important;
+    }
+
+    .cg-popup .leaflet-popup-tip-container { margin-top: -1px; }
+
+    .pu-head {
+      padding: 11px 14px 9px;
+    }
+
+    .pu-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 20px;
+      margin-bottom: 5px;
+    }
+
+    .pu-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111;
+      line-height: 1.3;
+    }
+
+    .pu-altname {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 2px;
+    }
+
+    .pu-loc {
+      padding: 5px 14px 7px;
+      font-size: 12px;
+      color: #888;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .pu-links {
+      padding: 7px 14px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .pu-link {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 20px;
+      text-decoration: none;
+      color: #fff;
+      opacity: 0.92;
+      transition: opacity 0.12s;
+    }
+
+    .pu-link:hover { opacity: 1; }
+
+    /* ── Cluster overrides ── */
+    .marker-cluster-small,
+    .marker-cluster-medium,
+    .marker-cluster-large {
+      background-color: rgba(225, 123, 44, 0.18);
+    }
+
+    .marker-cluster-small div,
+    .marker-cluster-medium div,
+    .marker-cluster-large div {
+      background-color: rgba(205, 105, 28, 0.72);
+      color: #fff;
+      font-weight: 600;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <h1>World <em>Cider</em> Map</h1>
+  <div id="stats">
+    <strong id="stat-count">—</strong> producers across <strong id="stat-countries">—</strong> countries
+  </div>
+  <div id="attr">by <a href="https://github.com/ericallanwest" target="_blank" rel="noopener">Eric West</a></div>
+</div>
+
+<div id="map"></div>
+
+<div id="legend">
+  <div id="legend-header">
+    <span id="legend-title">Producer Type</span>
+    <div class="legend-ctrl-group">
+      <button class="legend-ctrl" id="btn-all">All</button>
+      <button class="legend-ctrl" id="btn-none">None</button>
+    </div>
+  </div>
+  <div id="legend-rows"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+  const TYPE_CONFIG = {
+    'Cider':             { color: '#e17b2c' },
+    'Wine':              { color: '#8b2252' },
+    'Beer':              { color: '#c49a2a' },
+    'Point of Interest': { color: '#4a7fc4' },
+    'Mead':              { color: '#7a6010' },
+    'Fruit Wine':        { color: '#c4527a' },
+    'Spirits':           { color: '#6b5a9e' },
+  };
+
+  const LINKS = [
+    { key: 'website',     label: 'Website',     color: '#555555' },
+    { key: 'google',      label: 'Maps',        color: '#4285F4' },
+    { key: 'untappd',     label: 'Untappd',     color: '#d4830a' },
+    { key: 'instagram',   label: 'Instagram',   color: '#C13584' },
+    { key: 'facebook',    label: 'Facebook',    color: '#1877F2' },
+    { key: 'yelp',        label: 'Yelp',        color: '#d32323' },
+    { key: 'tripadvisor', label: 'TripAdvisor', color: '#00AF87' },
+    { key: 'glintcap',    label: 'CiderGuide',  color: '#e17b2c' },
+  ];
+
+  // ── Map init ──
+  const map = L.map('map', { center: [30, 5], zoom: 2, zoomControl: false });
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  const baseLayers = {
+    'Light': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 20,
+    }),
+    'Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 20,
+    }),
+    'Terrain': L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png', {
+      attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abcd', maxZoom: 18,
+    }),
+  };
+  baseLayers['Light'].addTo(map);
+  L.control.layers(baseLayers, {}, { position: 'topright', collapsed: true }).addTo(map);
+
+  // ── Marker icon factory ──
+  function makeIcon(color) {
+    return L.divIcon({
+      className: '',
+      html: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="${color}" stroke="white" stroke-width="1.5"/></svg>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -9],
+    });
+  }
+
+  // ── Popup builder ──
+  function buildPopup(p) {
+    const cfg = TYPE_CONFIG[p.type] || { color: '#888' };
+    const locParts = [p.town_city, p.region, p.country].filter(Boolean);
+
+    const linkHTML = LINKS
+      .filter(l => p[l.key])
+      .map(l => `<a href="${p[l.key]}" target="_blank" rel="noopener" class="pu-link" style="background:${l.color}">${l.label}</a>`)
+      .join('');
+
+    return `
+      <div class="pu-head">
+        <div class="pu-badge" style="background:${cfg.color}">${p.type || 'Unknown'}</div>
+        <div class="pu-name">${p.name || ''}</div>
+        ${p.alternate_name ? `<div class="pu-altname">aka ${p.alternate_name}</div>` : ''}
+      </div>
+      ${locParts.length ? `<div class="pu-loc">${locParts.join(', ')}</div>` : ''}
+      ${linkHTML ? `<div class="pu-links">${linkHTML}</div>` : ''}
+    `;
+  }
+
+  // ── Data & layer state ──
+  let allFeatures = [];
+  const markersByType = {};
+  const activeTypes = new Set(Object.keys(TYPE_CONFIG));
+
+  const cluster = L.markerClusterGroup({
+    chunkedLoading: true,
+    showCoverageOnHover: false,
+    maxClusterRadius: 50,
+  });
+  map.addLayer(cluster);
+
+  function applyFilters() {
+    cluster.clearLayers();
+    const toAdd = [];
+    for (const t of activeTypes) {
+      if (markersByType[t]) toAdd.push(...markersByType[t]);
+    }
+    cluster.addLayers(toAdd);
+    updateStats();
+  }
+
+  function updateStats() {
+    const countries = new Set();
+    let count = 0;
+    for (const f of allFeatures) {
+      if (activeTypes.has(f.properties.type)) {
+        count++;
+        if (f.properties.country) countries.add(f.properties.country);
+      }
+    }
+    document.getElementById('stat-count').textContent = count.toLocaleString();
+    document.getElementById('stat-countries').textContent = countries.size;
+  }
+
+  // ── Legend build ──
+  function buildLegend(typeCounts) {
+    const container = document.getElementById('legend-rows');
+    const sorted = Object.keys(TYPE_CONFIG).sort((a, b) => (typeCounts[b] || 0) - (typeCounts[a] || 0));
+
+    sorted.forEach(type => {
+      const cfg = TYPE_CONFIG[type];
+      const count = typeCounts[type] || 0;
+      const row = document.createElement('div');
+      row.className = 'legend-row';
+      row.dataset.type = type;
+      row.innerHTML = `
+        <div class="legend-dot" style="background:${cfg.color}"></div>
+        <span class="legend-label">${type}</span>
+        <span class="legend-count">${count.toLocaleString()}</span>
+      `;
+      row.addEventListener('click', () => {
+        if (activeTypes.has(type)) {
+          activeTypes.delete(type);
+          row.classList.add('off');
+        } else {
+          activeTypes.add(type);
+          row.classList.remove('off');
+        }
+        applyFilters();
+      });
+      container.appendChild(row);
+    });
+  }
+
+  document.getElementById('btn-all').addEventListener('click', () => {
+    Object.keys(TYPE_CONFIG).forEach(t => activeTypes.add(t));
+    document.querySelectorAll('.legend-row').forEach(r => r.classList.remove('off'));
+    applyFilters();
+  });
+
+  document.getElementById('btn-none').addEventListener('click', () => {
+    activeTypes.clear();
+    document.querySelectorAll('.legend-row').forEach(r => r.classList.add('off'));
+    applyFilters();
+  });
+
+  // ── Load data ──
+  fetch('data/producers.geojson')
+    .then(r => r.json())
+    .then(geojson => {
+      allFeatures = geojson.features;
+      const typeCounts = {};
+
+      allFeatures.forEach(f => {
+        const p = f.properties;
+        const type = p.type || 'Unknown';
+        const cfg = TYPE_CONFIG[type] || { color: '#888' };
+
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+        if (!markersByType[type]) markersByType[type] = [];
+
+        const [lng, lat] = f.geometry.coordinates;
+        const marker = L.marker([lat, lng], { icon: makeIcon(cfg.color) });
+        marker.bindPopup(() => buildPopup(p), { className: 'cg-popup', maxWidth: 280 });
+        markersByType[type].push(marker);
+      });
+
+      buildLegend(typeCounts);
+      applyFilters();
+    });
+</script>
+</body>
+</html>
